@@ -56,5 +56,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "Procedurally Generated Maze.sln"
+    "dotnet.defaultSolution": "Procedurally-Generated-Maze.sln"
 }
