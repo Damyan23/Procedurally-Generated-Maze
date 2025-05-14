@@ -101,8 +101,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   outerSize: 1
   height: 1
-  outerSidesVisible: 010000000000
-  innerSidesVisible: 000000000000
+  sidesVisible: 010101010101
   topVisible: 1
   bottomVisible: 1
   material: {fileID: 2100000, guid: d57e31c2c08c8a5499c4e952e0964622, type: 2}

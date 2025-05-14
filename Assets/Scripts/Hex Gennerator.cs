@@ -19,16 +19,31 @@ public class HexGennerator : MonoBehaviour
         }
     }
 
+    public enum HexDirection
+    {
+        East = 0,
+        NorthEast = 1,
+        NorthWest = 2,
+        West = 3,
+        SouthWest = 4,
+        SouthEast = 5
+    }
+
+
     [Header("Settings")]
     [HideInInspector] public float outerSize = 1f;
     private float innerSize;
     [HideInInspector] public float height = 1f;
 
     [Header("Side Visibility")]
-    [Tooltip("Controls which outer sides are visible, starting from side 0")]
-    public bool[] sidesVisible = new bool[6] { true, false, true, true, true, true };
-    
-    
+    [HideInInspector] public bool[] walls = new bool[6] { true, true, true, true, true, true };
+    [HideInInspector] public HexDirection[] path = new HexDirection[6] { HexDirection.East, HexDirection.NorthEast, HexDirection.NorthWest, HexDirection.West, HexDirection.SouthWest, HexDirection.SouthEast };
+    [HideInInspector] public bool visited = false;
+    [HideInInspector] public bool isStart = false;
+    [HideInInspector] public int gridX = 0;
+    [HideInInspector] public int gridY = 0;
+
+
     [Tooltip("Controls whether the top face is visible")]
     [SerializeField] private bool topVisible = true;
     
@@ -130,7 +145,7 @@ public class HexGennerator : MonoBehaviour
         // Add top face if visible
         for (int point = 0; point < 6; point++)
         {
-            if (sidesVisible[point])
+            if (walls[point])
             {
                 faces.Add(CreateFace(innerSize, outerSize, height / 2, height / 2, point));
             }
@@ -146,7 +161,7 @@ public class HexGennerator : MonoBehaviour
         // Add outer walls (sides) where visible
         for (int point = 0; point < 6; point++)
         {
-            if (sidesVisible[point])
+            if (walls[point])
             {
                 faces.Add(CreateFace(outerSize, outerSize, -height / 2, height / 2, point, true));
             }
@@ -155,7 +170,7 @@ public class HexGennerator : MonoBehaviour
         // Add inner walls (sides) where visible
         for (int point = 0; point < 6; point++)
         {
-            if (sidesVisible[point])
+            if (walls[point])
             {
                 faces.Add(CreateFace(innerSize, innerSize, -height / 2, height / 2, point));
             }
@@ -188,5 +203,21 @@ public class HexGennerator : MonoBehaviour
         mesh.uv = uvs.ToArray();
 
         mesh.RecalculateNormals();
+    }
+
+    public void DissableFace (int direction)
+    {
+        if (direction < 0 || direction > 5)
+        {
+            Debug.LogError("Invalid direction. Must be between 0 and 5.");
+            return;
+        }
+        walls[direction] = false;
+        if (mesh != null)
+        {
+            GenerateMesh();
+        }
+
+        Debug.Log (direction);
     }
 }
