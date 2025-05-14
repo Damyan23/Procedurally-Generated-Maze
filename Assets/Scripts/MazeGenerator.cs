@@ -8,14 +8,10 @@ public class MazeGenerator : MonoBehaviour
     private HexGennerator startHex;
 
     private List<HexGennerator> path = new ();
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        grid = GetComponent<GridController>();
-    }
 
     public void Init ()
     {   
+        grid = GetComponent<GridController>();
         startHex = grid.hexGrid[0, grid.gridHeight - 1]; // Get top left hex
         generateMaze(startHex);
     }
@@ -26,11 +22,9 @@ public class MazeGenerator : MonoBehaviour
         currentHex.isStart = true; // Mark it as start
 
         HexGennerator nextHex = grid.GetRandomNeighbor(currentHex);
-
-        if (nextHex == null || nextHex.visited) // If no unvisited neighbors, return
+        while (nextHex == null || nextHex.visited)
         {
-            Debug.Log ("Hex is null or already visited");
-            return;
+            nextHex = grid.GetRandomNeighbor(currentHex);
         }
         nextHex.visited = true; // Mark it as visited
         path.Append(nextHex); // Add it to the path
@@ -42,7 +36,7 @@ public class MazeGenerator : MonoBehaviour
     private void removeWalls (HexGennerator hex1, HexGennerator hex2)
     {
         int direction = grid.GetDirection(hex1, hex2);
-        hex1.DissableFace(direction % 6); // Remove wall from hex1
-        hex2.DissableFace ((direction + 3) % 6); // Remove wall from hex2
+        hex1.DissableFace(direction);
+        hex2.DissableFace (direction+ 3);
     }
 }

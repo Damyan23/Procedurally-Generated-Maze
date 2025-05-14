@@ -72,25 +72,25 @@ public class GridController : MonoBehaviour
         // Define the 6 possible neighbor offsets 
         Vector2Int[] neighborOffsetsEven = new Vector2Int[]
         {
-            new Vector2Int(+1,  0), // East
-            new Vector2Int( 0, -1), // NE
-            new Vector2Int(-1, -1), // NW
-            new Vector2Int(-1,  0), // West
-            new Vector2Int(-1, +1), // SW
-            new Vector2Int( 0, +1), // SE
+            new Vector2Int(+1, 0),   // East
+            new Vector2Int(0, +1),   // NE
+            new Vector2Int(-1, +1),  // NW
+            new Vector2Int(-1, 0),   // West
+            new Vector2Int(-1, -1),  // SW
+            new Vector2Int(0, -1),   // SE
         };
 
         Vector2Int[] neighborOffsetsOdd = new Vector2Int[]
         {
-            new Vector2Int(+1,  0), // East
-            new Vector2Int(+1, -1), // NE
-            new Vector2Int( 0, -1), // NW
-            new Vector2Int(-1,  0), // West
-            new Vector2Int( 0, +1), // SW
-            new Vector2Int(+1, +1), // SE
+            new Vector2Int(+1, 0),   // East
+            new Vector2Int(+1, +1),  // NE
+            new Vector2Int(0, +1),   // NW
+            new Vector2Int(-1, 0),   // West
+            new Vector2Int(0, -1),   // SW
+            new Vector2Int(+1, -1),  // SE
         };
 
-        Vector2Int[] neighborOffsets = neighborOffsetsEven;
+        Vector2Int[] neighborOffsets = (x % 2 == 0) ? neighborOffsetsEven : neighborOffsetsOdd;
 
         int attempts = 0;
         while (attempts < 20) // prevent infinite loop
@@ -116,21 +116,44 @@ public class GridController : MonoBehaviour
         return null;
     }
 
-   public int GetDirection(HexGennerator hex1, HexGennerator hex2)
+    public int GetDirection(HexGennerator hex1, HexGennerator hex2)
     {
-        // Calculate differences in axial coordinates (assuming hex1 and hex2 have gridX and gridY as axial coordinates)
+        int x = hex1.gridX;
         int dx = hex2.gridX - hex1.gridX;
         int dy = hex2.gridY - hex1.gridY;
 
-        // Check each direction based on axial coordinates
-        if (dx == 1 && dy == 0) return 0;  // East
-        if (dx == 0 && dy == -1) return 1; // NE
-        if (dx == -1 && dy == -1) return 2; // NW
-        if (dx == -1 && dy == 0) return 3; // West
-        if (dx == 0 && dy == 1) return 4;  // SW
-        if (dx == 1 && dy == 1) return 5;  // SE
+        // Use proper neighbor offsets based on parity of X
+        Vector2Int[] neighborOffsetsEven = new Vector2Int[]
+        {
+            new Vector2Int(+1, 0),   // 0 - East
+            new Vector2Int(0, +1),   // 1 - NE
+            new Vector2Int(-1, +1),  // 2 - NW
+            new Vector2Int(-1, 0),   // 3 - West
+            new Vector2Int(-1, -1),  // 4 - SW
+            new Vector2Int(0, -1),   // 5 - SE
+        };
 
-        return -1; // Invalid direction (shouldn't happen if hexes are neighbors)
+        Vector2Int[] neighborOffsetsOdd = new Vector2Int[]
+        {
+            new Vector2Int(+1, 0),   // 0 - East
+            new Vector2Int(+1, +1),  // 1 - NE
+            new Vector2Int(0, +1),   // 2 - NW
+            new Vector2Int(-1, 0),   // 3 - West
+            new Vector2Int(0, -1),   // 4 - SW
+            new Vector2Int(+1, -1),  // 5 - SE
+        };
+
+        Vector2Int[] neighborOffsets = (x % 2 == 0) ? neighborOffsetsEven : neighborOffsetsOdd;
+
+        for (int i = 0; i < 6; i++)
+        {
+            if (neighborOffsets[i].x == dx && neighborOffsets[i].y == dy)
+                return i;
+        }
+
+        Debug.Log("Invalid neighbor direction: dx = " + dx + ", dy = " + dy);
+        return -1; // Not a direct neighbor
     }
+
 
 }

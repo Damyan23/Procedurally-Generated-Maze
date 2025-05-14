@@ -21,12 +21,12 @@ public class HexGennerator : MonoBehaviour
 
     public enum HexDirection
     {
-        East = 0,
-        NorthEast = 1,
-        NorthWest = 2,
-        West = 3,
-        SouthWest = 4,
-        SouthEast = 5
+        West = 0,
+        SouthWest = 1,
+        SouthEast = 2,
+        East = 3,
+        NorthEast = 4,
+        NorthWest = 5
     }
 
 
@@ -37,7 +37,7 @@ public class HexGennerator : MonoBehaviour
 
     [Header("Side Visibility")]
     [HideInInspector] public bool[] walls = new bool[6] { true, true, true, true, true, true };
-    [HideInInspector] public HexDirection[] path = new HexDirection[6] { HexDirection.East, HexDirection.NorthEast, HexDirection.NorthWest, HexDirection.West, HexDirection.SouthWest, HexDirection.SouthEast };
+    [HideInInspector] public HexDirection[] path = new HexDirection[6] { HexDirection.West, HexDirection.SouthWest, HexDirection.SouthEast, HexDirection.East, HexDirection.NorthEast, HexDirection.NorthWest };
     [HideInInspector] public bool visited = false;
     [HideInInspector] public bool isStart = false;
     [HideInInspector] public int gridX = 0;
@@ -205,8 +205,9 @@ public class HexGennerator : MonoBehaviour
         mesh.RecalculateNormals();
     }
 
-    public void DissableFace (int direction)
-    {
+    public void DissableFace (int dir)
+    {  
+        int direction = dir % 6;
         if (direction < 0 || direction > 5)
         {
             Debug.LogError("Invalid direction. Must be between 0 and 5.");
@@ -217,7 +218,5 @@ public class HexGennerator : MonoBehaviour
         {
             GenerateMesh();
         }
-
-        Debug.Log (direction);
     }
 }
