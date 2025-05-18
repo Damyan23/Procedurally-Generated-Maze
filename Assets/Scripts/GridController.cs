@@ -1,4 +1,4 @@
-using Unity.Collections;
+using System.Collections;
 using UnityEngine;
 
 public class GridController : MonoBehaviour
@@ -9,7 +9,9 @@ public class GridController : MonoBehaviour
     public int gridHeight = 10;
     public float hexSize = 1f;
 
-    [HideInInspector] public HexGennerator[, ] hexGrid;
+    [SerializeField] private float yStartPosition = 10f;
+
+    [HideInInspector] public HexGennerator[,] hexGrid;
 
     void Start()
     {
@@ -17,10 +19,10 @@ public class GridController : MonoBehaviour
 
         hexGrid = new HexGennerator[gridWidth, gridHeight];
 
-        generateGrid();
+        StartCoroutine(generateGrid());
     }
 
-    void generateGrid()
+    private IEnumerator generateGrid()
     {
         float height = Mathf.Sqrt(3) * hexSize;
 
@@ -37,19 +39,21 @@ public class GridController : MonoBehaviour
                     zPos += height / 2f;
                 }
 
-                Vector3 position = new Vector3(xPos, 0, zPos);
+                Vector3 position = new Vector3(xPos, yStartPosition, zPos);
                 instantaiteHex(position, x, y);
+                yield return new WaitForSeconds(0.05f); // Small delay to visualize the grid generation
             }
         }
-
+        
+        yield return new WaitForSeconds(0.1f); // Small delay to visualize the grid generation
         mazeGenerator.Init();
     }
 
-    void instantaiteHex (Vector3 position, int x, int y)
+    void instantaiteHex(Vector3 position, int x, int y)
     {
-        
         GameObject hex = Instantiate(hexPrefab, position, Quaternion.identity, transform);
         hex.name = "Hex_" + x + "_" + y;
+        StartCoroutine (moveHex (hex, position - Vector3.up * yStartPosition));
 
         HexGennerator hexComponent = hex.GetComponent<HexGennerator>();
         hexComponent.outerSize = hexSize;
@@ -59,101 +63,80 @@ public class GridController : MonoBehaviour
         hexGrid[x, y] = hexComponent;
     }
 
+    private IEnumerator moveHex(GameObject hex, Vector3 targetPosition)
+    {
+        float elapsedTime = 0f;
+        float duration = 1.5f;
+
+        Vector3 startPosition = hex.transform.position;
+
+        while (elapsedTime < duration)
+        {
+            hex.transform.position = Vector3.Lerp(startPosition, targetPosition, elapsedTime / duration);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        hex.transform.position = targetPosition;
+    }
+
     public HexGennerator getHexAtPosition(int x, int y)
     {
         return hexGrid[x, y];
     }
 
-    public HexGennerator GetRandomNeighbor(HexGennerator hex)
+    public HexGennerator GetNeighborInDirection(HexGennerator hex, HexGennerator.HexDirection direction)
     {
-        int x = hex.gridX;
-        int y = hex.gridY;
-
-        // Define the 6 possible neighbor offsets 
-        Vector2Int[] neighborOffsetsEven = new Vector2Int[]
+        int[,] evenColOffsets = new int[,]
         {
-            new Vector2Int(+1, 0),   // East
-            new Vector2Int(0, +1),   // NE
-            new Vector2Int(-1, +1),  // NW
-            new Vector2Int(-1, 0),   // West
-            new Vector2Int(-1, -1),  // SW
-            new Vector2Int(0, -1),   // SE
+            {0, 1},   // Up
+            {1, 0},  // UpRight
+            {1, -1},  // DownRight
+            {0, -1},  // Down
+            {1, 1},  // DownLeft
+            {-1, 0}   // UpLeft
         };
 
-        Vector2Int[] neighborOffsetsOdd = new Vector2Int[]
+        int[,] oddColOffsets = new int[,]
         {
-            new Vector2Int(+1, 0),   // East
-            new Vector2Int(+1, +1),  // NE
-            new Vector2Int(0, +1),   // NW
-            new Vector2Int(-1, 0),   // West
-            new Vector2Int(0, -1),   // SW
-            new Vector2Int(+1, -1),  // SE
+            {0, 1},    // Up
+            {1, 1},  // UpRight
+            {1, 0},    // DownRight
+            {0, -1},   // Down
+            {1, 0},   // DownLeft
+            {-1, 1}    // UpLeft
         };
+        
 
-        Vector2Int[] neighborOffsets = (x % 2 == 0) ? neighborOffsetsEven : neighborOffsetsOdd;
+        int dir = (int)direction;
+        bool evenCol = hex.gridX % 2 == 0;
+        int dx, dy;
 
-        int attempts = 0;
-        while (attempts < 20) // prevent infinite loop
+        if (evenCol)
         {
-            int index = Random.Range(0, 6);
-            Vector2Int offset = neighborOffsets[index];
-
-            int nx = x + offset.x;
-            int ny = y + offset.y;
-
-            if (nx >= 0 && nx < gridWidth && ny >= 0 && ny < gridHeight)
-            {
-                HexGennerator randomHex = hexGrid[nx, ny];
-                if (randomHex != null && randomHex.visited == false)
-                {
-                    return randomHex;
-                }
-            }
-
-            attempts++;
+            dx = evenColOffsets[dir, 0]; 
+            dy = evenColOffsets[dir, 1];
+        }
+        else
+        {
+            dx = oddColOffsets[dir, 0];
+            dy = oddColOffsets[dir, 1];
         }
 
+        int newX = hex.gridX + dx;
+        int newY = hex.gridY + dy;
+
+        if (newX >= 0 && newX < gridWidth && newY >= 0 && newY < gridHeight)
+        {
+            return hexGrid[newX, newY];
+        }
         return null;
     }
 
-    public int GetDirection(HexGennerator hex1, HexGennerator hex2)
+
+    public HexGennerator.HexDirection GetOppositeDirection(HexGennerator.HexDirection direction)
     {
-        int x = hex1.gridX;
-        int dx = hex2.gridX - hex1.gridX;
-        int dy = hex2.gridY - hex1.gridY;
-
-        // Use proper neighbor offsets based on parity of X
-        Vector2Int[] neighborOffsetsEven = new Vector2Int[]
-        {
-            new Vector2Int(+1, 0),   // 0 - East
-            new Vector2Int(0, +1),   // 1 - NE
-            new Vector2Int(-1, +1),  // 2 - NW
-            new Vector2Int(-1, 0),   // 3 - West
-            new Vector2Int(-1, -1),  // 4 - SW
-            new Vector2Int(0, -1),   // 5 - SE
-        };
-
-        Vector2Int[] neighborOffsetsOdd = new Vector2Int[]
-        {
-            new Vector2Int(+1, 0),   // 0 - East
-            new Vector2Int(+1, +1),  // 1 - NE
-            new Vector2Int(0, +1),   // 2 - NW
-            new Vector2Int(-1, 0),   // 3 - West
-            new Vector2Int(0, -1),   // 4 - SW
-            new Vector2Int(+1, -1),  // 5 - SE
-        };
-
-        Vector2Int[] neighborOffsets = (x % 2 == 0) ? neighborOffsetsEven : neighborOffsetsOdd;
-
-        for (int i = 0; i < 6; i++)
-        {
-            if (neighborOffsets[i].x == dx && neighborOffsets[i].y == dy)
-                return i;
-        }
-
-        Debug.Log("Invalid neighbor direction: dx = " + dx + ", dy = " + dy);
-        return -1; // Not a direct neighbor
+        // Return the opposite direction (3 positions away in the hex)
+        return (HexGennerator.HexDirection)(((int)direction + 3) % 6);
     }
-
-
 }

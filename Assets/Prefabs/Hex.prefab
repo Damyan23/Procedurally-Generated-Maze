@@ -65,7 +65,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 0dd06af1b8fac3645a722ee5d39f39c7, type: 2}
+  - {fileID: 2100000, guid: d57e31c2c08c8a5499c4e952e0964622, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -101,7 +101,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   outerSize: 1
   height: 1
-  sidesVisible: 010101010101
+  walls: 010101010101
+  visited: 0
+  isStart: 0
+  gridX: 0
+  gridY: 0
+  showDirections: 0
   topVisible: 1
   bottomVisible: 1
   material: {fileID: 2100000, guid: d57e31c2c08c8a5499c4e952e0964622, type: 2}
+  floorMaterial: {fileID: 2100000, guid: 0dd06af1b8fac3645a722ee5d39f39c7, type: 2}
+  gizmoColor: {r: 0, g: 1, b: 1, a: 1}

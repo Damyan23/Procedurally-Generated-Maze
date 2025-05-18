@@ -1,11 +1,13 @@
+using System;
 using System.Collections.Generic;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
 public class HexGennerator : MonoBehaviour
 {
-    private struct Face 
+    private struct Face
     {
         public List<Vector3> vertecies { get; private set; }
         public List<int> triangles { get; private set; }
@@ -21,12 +23,12 @@ public class HexGennerator : MonoBehaviour
 
     public enum HexDirection
     {
-        West = 0,
-        SouthWest = 1,
-        SouthEast = 2,
-        East = 3,
-        NorthEast = 4,
-        NorthWest = 5
+        Up = 0,
+        UpRight = 1,
+        DownRight = 2,
+        Down = 3,
+        DownLeft = 4,
+        UpLeft = 5,
     }
 
 
@@ -36,17 +38,29 @@ public class HexGennerator : MonoBehaviour
     [HideInInspector] public float height = 1f;
 
     [Header("Side Visibility")]
-    [HideInInspector] public bool[] walls = new bool[6] { true, true, true, true, true, true };
-    [HideInInspector] public HexDirection[] path = new HexDirection[6] { HexDirection.West, HexDirection.SouthWest, HexDirection.SouthEast, HexDirection.East, HexDirection.NorthEast, HexDirection.NorthWest };
+    public bool[] walls = new bool[6] { true, true, true, true, true, true };
+    [HideInInspector] private HexDirection[] clockwiseDirections = new HexDirection[6]
+    {
+        HexDirection.Up, 
+        HexDirection.UpRight, 
+        HexDirection.DownRight, 
+        HexDirection.Down, 
+        HexDirection.DownLeft, 
+        HexDirection.UpLeft
+    };
+
+
     [HideInInspector] public bool visited = false;
     [HideInInspector] public bool isStart = false;
     [HideInInspector] public int gridX = 0;
     [HideInInspector] public int gridY = 0;
+    [Header("Debug")]
+    [SerializeField] private bool showDirections = false;
 
 
     [Tooltip("Controls whether the top face is visible")]
     [SerializeField] private bool topVisible = true;
-    
+
     [Tooltip("Controls whether the bottom face is visible")]
     [SerializeField] private bool bottomVisible = true;
 
@@ -56,8 +70,12 @@ public class HexGennerator : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private Material material;
+    [SerializeField] private Material floorMaterial;
 
-    private List<Face> faces = new();
+    private List<Face> faces = new List<Face>();
+
+    // For debugging wall removal
+    public Color gizmoColor = Color.cyan;
 
     private void InitIfNeeded()
     {
@@ -76,11 +94,11 @@ public class HexGennerator : MonoBehaviour
             meshRenderer.sharedMaterial = material;
         }
 
-        innerSize = outerSize - (outerSize % 1 + 0.2f);
+        innerSize = outerSize * 0.7f;
     }
 
     void OnEnable()
-    {   
+    {
         InitIfNeeded();
         GenerateMesh();
     }
@@ -100,20 +118,21 @@ public class HexGennerator : MonoBehaviour
         CombineFaces();
     }
 
-    protected Vector3 GetPoint(float size, float height, int index)
+    private Vector3 getPoint(float size, float height, int index)
     {
-        float angleD = 60 * index;
+        float angleD = 120 - (60 * index);
         float angleR = angleD * Mathf.Deg2Rad;
 
         return new Vector3(size * Mathf.Cos(angleR), height, size * Mathf.Sin(angleR));
     }
 
+
     private Face CreateFace(float radiusBottom, float radiusTop, float heightBottom, float heightTop, int point, bool reverse = false)
     {
-        Vector3 pointA = GetPoint(radiusBottom, heightBottom, point);
-        Vector3 pointB = GetPoint(radiusBottom, heightBottom, (point < 5) ? point + 1 : 0);
-        Vector3 pointC = GetPoint(radiusTop, heightTop, (point < 5) ? point + 1 : 0);
-        Vector3 pointD = GetPoint(radiusTop, heightTop, point);
+        Vector3 pointA = getPoint(radiusBottom, heightBottom, point);
+        Vector3 pointB = getPoint(radiusBottom, heightBottom, (point < 5) ? point + 1 : 0);
+        Vector3 pointC = getPoint(radiusTop, heightTop, (point < 5) ? point + 1 : 0);
+        Vector3 pointD = getPoint(radiusTop, heightTop, point);
 
         List<Vector3> vertecies = new List<Vector3>
         {
@@ -138,85 +157,203 @@ public class HexGennerator : MonoBehaviour
         return new Face(vertecies, triangles, uvs);
     }
 
+    // New method to create wall end caps
+    private Face CreateWallEndCap(int wallIndex, bool isStart, float wallHeight, bool reverse = false)
+    {
+        // Determine if we're creating the cap at the start or end of the wall
+        int pointIndex = isStart ? wallIndex : (wallIndex < 5 ? wallIndex + 1 : 0);
+
+        // Get the points for inner and outer vertices at the specified height
+        Vector3 innerPoint = getPoint(innerSize, wallHeight / 2, pointIndex);
+        Vector3 outerPoint = getPoint(outerSize, wallHeight / 2, pointIndex);
+        Vector3 innerPointBottom = getPoint(innerSize, -wallHeight / 2, pointIndex);
+        Vector3 outerPointBottom = getPoint(outerSize, -wallHeight / 2, pointIndex);
+
+        // Create vertices list
+        List<Vector3> vertices = new List<Vector3>
+        {
+            innerPointBottom,  // 0: inner bottom
+            outerPointBottom,  // 1: outer bottom
+            outerPoint,        // 2: outer top
+            innerPoint         // 3: inner top
+        };
+
+        // Create triangles - standard quad
+        List<int> triangles = reverse ? new List<int> { 0, 3, 2, 2, 1, 0 } : new List<int> { 0, 1, 2, 2, 3, 0 }; // normal winding;
+
+        // Simple UVs for the cap
+        List<Vector2> uvs = new List<Vector2>
+        {
+            new Vector2(0, 0),
+            new Vector2(1, 0),
+            new Vector2(1, 1),
+            new Vector2(0, 1)
+        };
+
+        return new Face(vertices, triangles, uvs);
+    }
+
+
     void DrawFaces()
     {
         faces = new List<Face>();
-        
-        // Add top face if visible
-        for (int point = 0; point < 6; point++)
+
+        foreach (HexDirection direction in clockwiseDirections)
         {
-            if (walls[point])
-            {
-                faces.Add(CreateFace(innerSize, outerSize, height / 2, height / 2, point));
-            }
+            int point = (int)direction;
+            faces.Add(CreateFace(outerSize, 0, -height / 2, -height / 2, point));
         }
 
-        // Add bottom face
-        for (int point = 0; point < 6; point++)
-        {
-            faces.Add(CreateFace(outerSize, 0, -height / 2, -height / 2, point, true));
-        }
-        
-        
         // Add outer walls (sides) where visible
-        for (int point = 0; point < 6; point++)
+        foreach (HexDirection direction in clockwiseDirections)
         {
+            int point = (int)direction;
             if (walls[point])
             {
-                faces.Add(CreateFace(outerSize, outerSize, -height / 2, height / 2, point, true));
-            }
-        }
-        
-        // Add inner walls (sides) where visible
-        for (int point = 0; point < 6; point++)
-        {
-            if (walls[point])
-            {
-                faces.Add(CreateFace(innerSize, innerSize, -height / 2, height / 2, point));
+                // Add top face
+                faces.Add(CreateFace(innerSize, outerSize, height / 2, height / 2, point, true));
+
+                // Outer wall
+                faces.Add(CreateFace(outerSize, outerSize, -height / 2, height / 2, point));
+
+                // Inner wall (for thickness)
+                faces.Add(CreateFace(innerSize, innerSize, -height / 2, height / 2, point, true));
+
+                // Check if we need end caps (when adjacent walls are disabled)
+                int prevWallIndex = (point + 5) % 6; // Previous wall
+                int nextWallIndex = (point + 1) % 6; // Next wall
+
+                // Add start cap if the previous wall is disabled
+                if (!walls[prevWallIndex])
+                {
+                    faces.Add(CreateWallEndCap(point, true, height, false));
+                }
+
+                // Add end cap if the next wall is disabled
+                if (!walls[nextWallIndex])
+                {
+                    faces.Add(CreateWallEndCap(point, false, height, true));
+                }
             }
         }
     }
 
     void CombineFaces()
     {
-        List<Vector3> vertecies = new();
-        List<int> triangles = new();
-        List<Vector2> uvs = new();
+        List<Vector3> vertecies = new List<Vector3>();
+        List<int> triangles = new List<int>();
+        List<int> floorTriangles = new List<int>();
+        List<Vector2> uvs = new List<Vector2>();
 
+        int vertexOffset = 0;
         for (int i = 0; i < faces.Count; i++)
         {
             Face currentFace = faces[i];
-
-            int vertexOffset = vertecies.Count;
             vertecies.AddRange(currentFace.vertecies);
             uvs.AddRange(currentFace.uvs);
 
-            foreach (int index in currentFace.triangles)
+            // Assume the first 6 faces are the floor (adjust if needed)
+            if (i < 6)
             {
-                triangles.Add(index + vertexOffset);
+                foreach (int index in currentFace.triangles)
+                    floorTriangles.Add(index + vertexOffset);
             }
+            else
+            {
+                foreach (int index in currentFace.triangles)
+                    triangles.Add(index + vertexOffset);
+            }
+            vertexOffset += currentFace.vertecies.Count;
         }
 
         mesh.Clear();
         mesh.vertices = vertecies.ToArray();
-        mesh.triangles = triangles.ToArray();
+        mesh.subMeshCount = 2;
+        mesh.SetTriangles(floorTriangles.ToArray(), 0); // Floor
+        mesh.SetTriangles(triangles.ToArray(), 1);      // Walls
         mesh.uv = uvs.ToArray();
-
         mesh.RecalculateNormals();
+
+        // Assign both materials
+        meshRenderer.materials = new Material[] { floorMaterial, material };
     }
 
-    public void DissableFace (int dir)
-    {  
-        int direction = dir % 6;
-        if (direction < 0 || direction > 5)
-        {
-            Debug.LogError("Invalid direction. Must be between 0 and 5.");
-            return;
-        }
+    // Combined method with better error handling
+    public void DisableFace(HexDirection dir)
+    {
+        int direction = (int)dir;
+        DisableFace(direction);
+    }
+
+    public void DisableFace(int dir)
+    {
+        // Normalize and validate direction
+        int direction = ((dir % 6) + 6) % 6; // Handle negative values properly
         walls[direction] = false;
-        if (mesh != null)
+        GenerateMesh();
+    }
+
+    public HexDirection[] GetShuffeldDirections()
+    {
+        HexDirection[] directions = clockwiseDirections;
+        System.Random random = new System.Random();
+        int n = directions.Length;
+
+        while (n > 1)
         {
-            GenerateMesh();
+            int k = random.Next(n--);
+            HexDirection value = directions[k];
+            directions[k] = directions[n];
+            directions[n] = value;
+        }
+
+        return directions;
+    }
+
+    // Debug gizmos to show wall directions
+    private void OnDrawGizmos()
+    {
+        if (!showDirections) return;
+
+        Gizmos.color = gizmoColor;
+        Vector3 center = transform.position;
+        float arrowLength = outerSize * 0.8f;
+
+        // Draw direction indicators
+        for (int i = 0; i < 6; i++)
+        {
+            if (walls[i])
+            {
+                // Direction vector
+                float angleD = 60 * i;
+                float angleR = angleD * Mathf.Deg2Rad;
+                Vector3 direction = new Vector3(Mathf.Cos(angleR), 0, Mathf.Sin(angleR));
+
+                // Draw wall indicator
+                Gizmos.DrawLine(center, center + direction * arrowLength);
+
+                // Label the direction
+#if UNITY_EDITOR
+                if (UnityEditor.Selection.activeGameObject == gameObject)
+                {
+                    UnityEditor.Handles.Label(center + direction * (arrowLength + 0.2f), i.ToString());
+                }
+#endif
+            }
+        }
+
+        // If this is the start hex, mark it
+        if (isStart)
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawSphere(center + Vector3.up * 0.5f, 0.2f);
+        }
+
+        // If this hex has been visited, mark it
+        if (visited)
+        {
+            Gizmos.color = Color.blue;
+            Gizmos.DrawCube(center + Vector3.up * 0.25f, new Vector3(0.1f, 0.1f, 0.1f));
         }
     }
 }
