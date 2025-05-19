@@ -93,7 +93,7 @@ public class GridController : MonoBehaviour
             {1, 0},  // UpRight
             {1, -1},  // DownRight
             {0, -1},  // Down
-            {1, 1},  // DownLeft
+            {-1, -1},  // DownLeft
             {-1, 0}   // UpLeft
         };
 
@@ -103,7 +103,7 @@ public class GridController : MonoBehaviour
             {1, 1},  // UpRight
             {1, 0},    // DownRight
             {0, -1},   // Down
-            {1, 0},   // DownLeft
+            {-1, 0},   // DownLeft
             {-1, 1}    // UpLeft
         };
         

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
@@ -73,6 +74,7 @@ public class HexGennerator : MonoBehaviour
     [SerializeField] private Material floorMaterial;
 
     private List<Face> faces = new List<Face>();
+    private Dictionary<HexDirection, int> wallFaceIndices = new Dictionary<HexDirection, int>();
 
     // For debugging wall removal
     public Color gizmoColor = Color.cyan;

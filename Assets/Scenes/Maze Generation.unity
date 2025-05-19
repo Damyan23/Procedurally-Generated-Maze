@@ -596,9 +596,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hexPrefab: {fileID: 4596901680687941622, guid: 9d70049b32aee3940b5a1ef7811fec34, type: 3}
-  gridWidth: 2
-  gridHeight: 2
+  gridWidth: 5
+  gridHeight: 5
   hexSize: 1
+  yStartPosition: 10
 --- !u!4 &1653987129
 Transform:
   m_ObjectHideFlags: 0
