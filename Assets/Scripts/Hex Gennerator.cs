@@ -36,7 +36,7 @@ public class HexGennerator : MonoBehaviour
     [Header("Settings")]
     [HideInInspector] public float outerSize = 1f;
     private float innerSize;
-    [HideInInspector] public float height = 1f;
+    public float height;
 
     [Header("Side Visibility")]
     public bool[] walls = new bool[6] { true, true, true, true, true, true };
@@ -166,11 +166,10 @@ public class HexGennerator : MonoBehaviour
         int pointIndex = isStart ? wallIndex : (wallIndex < 5 ? wallIndex + 1 : 0);
 
         // Get the points for inner and outer vertices at the specified height
-        Vector3 innerPoint = getPoint(innerSize, wallHeight / 2, pointIndex);
-        Vector3 outerPoint = getPoint(outerSize, wallHeight / 2, pointIndex);
-        Vector3 innerPointBottom = getPoint(innerSize, -wallHeight / 2, pointIndex);
-        Vector3 outerPointBottom = getPoint(outerSize, -wallHeight / 2, pointIndex);
-
+        Vector3 innerPoint = getPoint(innerSize, wallHeight, pointIndex);
+        Vector3 outerPoint = getPoint(outerSize, wallHeight, pointIndex);
+        Vector3 innerPointBottom = getPoint(innerSize, 0, pointIndex);
+        Vector3 outerPointBottom = getPoint(outerSize, 0, pointIndex);
         // Create vertices list
         List<Vector3> vertices = new List<Vector3>
         {
@@ -203,7 +202,7 @@ public class HexGennerator : MonoBehaviour
         foreach (HexDirection direction in clockwiseDirections)
         {
             int point = (int)direction;
-            faces.Add(CreateFace(outerSize, 0, -height / 2, -height / 2, point));
+            faces.Add(CreateFace(outerSize, 0, 0, 0, point));
         }
 
         // Add outer walls (sides) where visible
@@ -213,13 +212,13 @@ public class HexGennerator : MonoBehaviour
             if (walls[point])
             {
                 // Add top face
-                faces.Add(CreateFace(innerSize, outerSize, height / 2, height / 2, point, true));
+                faces.Add(CreateFace(innerSize, outerSize, height, height, point, true));
 
                 // Outer wall
-                faces.Add(CreateFace(outerSize, outerSize, -height / 2, height / 2, point));
+                faces.Add(CreateFace(outerSize, outerSize, 0, height, point));
 
                 // Inner wall (for thickness)
-                faces.Add(CreateFace(innerSize, innerSize, -height / 2, height / 2, point, true));
+                faces.Add(CreateFace(innerSize, innerSize, 0, height, point, true));
 
                 // Check if we need end caps (when adjacent walls are disabled)
                 int prevWallIndex = (point + 5) % 6; // Previous wall

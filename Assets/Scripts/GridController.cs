@@ -1,8 +1,13 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class GridController : MonoBehaviour
 {
+    [Header("Hexes settings")]
+    public float height;
+    private float lastHeight;
+
     private MazeGenerator mazeGenerator;
     [SerializeField] private GameObject hexPrefab;
     public int gridWidth = 10;
@@ -19,7 +24,41 @@ public class GridController : MonoBehaviour
 
         hexGrid = new HexGennerator[gridWidth, gridHeight];
 
-        StartCoroutine(generateGrid());
+        lastHeight = height;
+        HexGennerator hexPrefabGen = hexPrefab.GetComponent<HexGennerator>();
+        hexPrefabGen.height = height;
+        hexPrefabGen.outerSize = hexSize;
+        // StartCoroutine(generateGrid());
+    }
+
+    void Update()
+    {
+        updateHexesHeights();
+    }
+
+    void updateHexesHeights()
+    {
+        if (!Mathf.Approximately(height, lastHeight))
+        {
+            lastHeight = height;
+            UpdateHexHeights(height);
+        }
+    }
+
+    public void UpdateHexHeights(float newHeight)
+    {
+        for (int x = 0; x < gridWidth; x++)
+        {
+            for (int y = 0; y < gridHeight; y++)
+            {
+                HexGennerator hex = hexGrid[x, y];
+                if (hex != null)
+                {
+                    hex.height = newHeight;
+                    hex.GenerateMesh();
+                }
+            }
+        }
     }
 
     private IEnumerator generateGrid()
@@ -33,7 +72,6 @@ public class GridController : MonoBehaviour
                 float xPos = x * (hexSize * 1.5f);
                 float zPos = y * height;
 
-                // Offset every odd column
                 if (x % 2 == 1)
                 {
                     zPos += height / 2f;
@@ -41,11 +79,11 @@ public class GridController : MonoBehaviour
 
                 Vector3 position = new Vector3(xPos, yStartPosition, zPos);
                 instantaiteHex(position, x, y);
-                yield return new WaitForSeconds(0.05f); // Small delay to visualize the grid generation
+                yield return new WaitForSeconds(0.05f);
             }
         }
-        
-        yield return new WaitForSeconds(0.1f); // Small delay to visualize the grid generation
+
+        yield return new WaitForSeconds(0.1f);
         mazeGenerator.Init();
     }
 
@@ -53,11 +91,12 @@ public class GridController : MonoBehaviour
     {
         GameObject hex = Instantiate(hexPrefab, position, Quaternion.identity, transform);
         hex.name = "Hex_" + x + "_" + y;
-        StartCoroutine (moveHex (hex, position - Vector3.up * yStartPosition));
+
+        Vector3 landingPosition = new Vector3(position.x, 0, position.z);
+        StartCoroutine(moveHex(hex, landingPosition));
 
         HexGennerator hexComponent = hex.GetComponent<HexGennerator>();
         hexComponent.outerSize = hexSize;
-        hexComponent.height = 1f;
         hexComponent.gridX = x;
         hexComponent.gridY = y;
         hexGrid[x, y] = hexComponent;
@@ -106,7 +145,6 @@ public class GridController : MonoBehaviour
             {-1, 0},   // DownLeft
             {-1, 1}    // UpLeft
         };
-        
 
         int dir = (int)direction;
         bool evenCol = hex.gridX % 2 == 0;
@@ -133,10 +171,36 @@ public class GridController : MonoBehaviour
         return null;
     }
 
+    public List<HexGennerator> GetVisitedNeighbors(HexGennerator hex)
+    {
+        List<HexGennerator> visited = new();
+        foreach (HexGennerator.HexDirection dir in System.Enum.GetValues(typeof(HexGennerator.HexDirection)))
+        {
+            var neighbor = GetNeighborInDirection(hex, dir);
+            if (neighbor != null && neighbor.visited)
+            {
+                visited.Add(neighbor);
+            }
+        }
+        return visited;
+    }
 
     public HexGennerator.HexDirection GetOppositeDirection(HexGennerator.HexDirection direction)
     {
-        // Return the opposite direction (3 positions away in the hex)
         return (HexGennerator.HexDirection)(((int)direction + 3) % 6);
     }
-}
+
+    public HexGennerator.HexDirection GetDirectionBetween(HexGennerator from, HexGennerator to)
+    {
+        foreach (HexGennerator.HexDirection dir in System.Enum.GetValues(typeof(HexGennerator.HexDirection)))
+        {
+            var neighbor = GetNeighborInDirection(from, dir);
+            if (neighbor == to)
+            {
+                return dir;
+            }
+        }
+        Debug.LogWarning($"Direction not found between {from.name} and {to.name}");
+        return HexGennerator.HexDirection.Up;
+    }
+} 
