@@ -1,14 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using UnityEditor;
 using UnityEngine;
 
 public class MazeGenerator : MonoBehaviour
 {
     private GridController grid;
-    private HexGennerator startHex;
+    private object startCell;
 
     public LineRenderer lr;
 
@@ -16,50 +15,62 @@ public class MazeGenerator : MonoBehaviour
     public MazeAlgorithmType algorithmType = MazeAlgorithmType.DFS;
 
     private int currentRecursionDepth = 0;
-    private int visitedHexCount = 0;
-    private int totalHexCount = 0;
+    private int visitedCellCount = 0;
+    private int totalCellCount = 0;
 
     [Header("Debug")]
     [SerializeField] private bool showDebugPath = true;
 
-    private List<HexGennerator> path = new(); // DFS
-    private List<HexGennerator> frontier = new(); // Prim
+    private List<object> path = new(); // DFS
+    private List<object> frontier = new(); // Prim
 
     public enum MazeAlgorithmType { DFS, Prim, Wilson }
 
     public void Init()
     {
         grid = GetComponent<GridController>();
-        startHex = grid.hexGrid[0, grid.gridHeight - 1];
-        totalHexCount = grid.gridWidth * grid.gridHeight;
-        visitedHexCount = 0;
+        startCell = grid.GetStartCell();
+        totalCellCount = grid.gridWidth * grid.gridHeight;
+        visitedCellCount = 0;
 
-        foreach (var hex in grid.hexGrid)
-            hex.visited = false;
-
-        Handles.color = Color.red;
+        // Reset all cells
+        var currentGrid = grid.GetCurrentGrid();
+        if (currentGrid != null)
+        {
+            for (int x = 0; x < grid.gridWidth; x++)
+            {
+                for (int y = 0; y < grid.gridHeight; y++)
+                {
+                    var cell = currentGrid[x, y];
+                    if (cell != null)
+                    {
+                        grid.SetVisited(cell, false);
+                    }
+                }
+            }
+        }
 
         switch (algorithmType)
         {
             case MazeAlgorithmType.DFS:
                 path.Clear();
-                StartCoroutine(generateMazeDFS(startHex));
+                StartCoroutine(GenerateMazeDFS(startCell));
                 break;
             case MazeAlgorithmType.Prim:
                 frontier.Clear();
-                StartCoroutine(generateMazePrim(startHex));
+                StartCoroutine(GenerateMazePrim(startCell));
                 break;
             case MazeAlgorithmType.Wilson:
-                StartCoroutine(generateMazeWilson());
+                StartCoroutine(GenerateMazeWilson());
                 break;
         }
     }
 
-    private IEnumerator generateMazeDFS(HexGennerator currentHex)
+    private IEnumerator GenerateMazeDFS(object currentCell)
     {
-        if (visitedHexCount >= totalHexCount)
-        {            
-            Debug.Log("Maze generated (DFS)");
+        if (visitedCellCount >= totalCellCount)
+        {
+            Debug.Log($"Maze generated (DFS) - {grid.GetGridType()}");
             yield break;
         }
 
@@ -69,30 +80,30 @@ public class MazeGenerator : MonoBehaviour
 
         currentRecursionDepth++;
 
-        if (!currentHex.visited)
+        if (!grid.IsVisited(currentCell))
         {
-            currentHex.visited = true;
-            visitedHexCount++;
+            grid.SetVisited(currentCell, true);
+            visitedCellCount++;
         }
 
-        HexGennerator.HexDirection[] directions = currentHex.GetShuffeldDirections();
+        HexGennerator.HexDirection[] directions = grid.GetShuffledDirections(currentCell);
         bool foundValidNeighbor = false;
 
         foreach (HexGennerator.HexDirection dir in directions)
         {
-            HexGennerator nextHex = grid.GetNeighborInDirection(currentHex, dir);
-            if (nextHex == null || nextHex.visited)
+            object nextCell = grid.GetNeighborInDirection(currentCell, dir);
+            if (nextCell == null || grid.IsVisited(nextCell))
                 continue;
 
             foundValidNeighbor = true;
-            removeWalls(currentHex, nextHex, dir);
-            nextHex.visited = true;
-            visitedHexCount++;
-            path.Add(nextHex);
+            RemoveWalls(currentCell, nextCell, dir);
+            grid.SetVisited(nextCell, true);
+            visitedCellCount++;
+            path.Add(nextCell);
 
-            drawDebugPath(currentHex);
+            DrawDebugPath(currentCell);
 
-            yield return StartCoroutine(generateMazeDFS(nextHex));
+            yield return StartCoroutine(GenerateMazeDFS(nextCell));
             break;
         }
 
@@ -101,66 +112,81 @@ public class MazeGenerator : MonoBehaviour
             path.RemoveAt(path.Count - 1);
             if (path.Count > 0)
             {
-                HexGennerator lastHex = path[path.Count - 1];
-                yield return StartCoroutine(generateMazeDFS(lastHex));
+                object lastCell = path[path.Count - 1];
+                yield return StartCoroutine(GenerateMazeDFS(lastCell));
             }
         }
 
+        currentRecursionDepth--;
         yield return new WaitForSeconds(0.1f);
     }
 
-    private IEnumerator generateMazePrim(HexGennerator start)
+    private IEnumerator GenerateMazePrim(object start)
     {
-        start.visited = true;
-        visitedHexCount++;
+        grid.SetVisited(start, true);
+        visitedCellCount++;
         AddFrontier(start);
 
-        while (visitedHexCount < totalHexCount)
+        while (visitedCellCount < totalCellCount)
         {
             if (frontier.Count == 0) break;
 
-            HexGennerator frontierHex = frontier[Random.Range(0, frontier.Count)];
-            var neighbors = grid.GetVisitedNeighbors(frontierHex);
+            object frontierCell = frontier[Random.Range(0, frontier.Count)];
+            var neighbors = grid.GetVisitedNeighbors(frontierCell);
 
             if (neighbors.Count > 0)
             {
-                HexGennerator neighbor = neighbors[Random.Range(0, neighbors.Count)];
-                var dir = grid.GetDirectionBetween(neighbor, frontierHex);
-                removeWalls(neighbor, frontierHex, dir);
+                object neighbor = neighbors[Random.Range(0, neighbors.Count)];
+                var dir = grid.GetDirectionBetween(neighbor, frontierCell);
+                RemoveWalls(neighbor, frontierCell, dir);
             }
 
-            frontierHex.visited = true;
-            visitedHexCount++;
-            AddFrontier(frontierHex);
-            frontier.Remove(frontierHex);
+            grid.SetVisited(frontierCell, true);
+            visitedCellCount++;
+            AddFrontier(frontierCell);
+            frontier.Remove(frontierCell);
 
-            drawDebugPath(frontierHex);
+            DrawDebugPath(frontierCell);
             yield return new WaitForSeconds(0.05f);
         }
 
-        Debug.Log("Maze generated (Prim)");
+        Debug.Log($"Maze generated (Prim) - {grid.GetGridType()}");
     }
 
-    private IEnumerator generateMazeWilson()
+    private IEnumerator GenerateMazeWilson()
     {
-        List<HexGennerator> unvisited = new();
-        foreach (var hex in grid.hexGrid)
-            unvisited.Add(hex);
+        List<object> unvisited = new();
+        var currentGrid = grid.GetCurrentGrid();
+        
+        for (int x = 0; x < grid.gridWidth; x++)
+        {
+            for (int y = 0; y < grid.gridHeight; y++)
+            {
+                var cell = currentGrid[x, y];
+                if (cell != null)
+                {
+                    unvisited.Add(cell);
+                }
+            }
+        }
 
-        HexGennerator first = unvisited[Random.Range(0, unvisited.Count)];
-        first.visited = true;
-        visitedHexCount++;
+        object first = unvisited[Random.Range(0, unvisited.Count)];
+        grid.SetVisited(first, true);
+        visitedCellCount++;
         unvisited.Remove(first);
 
         while (unvisited.Count > 0)
         {
-            HexGennerator current = unvisited[Random.Range(0, unvisited.Count)];
-            Dictionary<HexGennerator, HexGennerator.HexDirection> path = new();
-            List<HexGennerator> walk = new()current };
+            object current = unvisited[Random.Range(0, unvisited.Count)];
+            Dictionary<object, HexGennerator.HexDirection> pathDict = new();
+            List<object> walk = new() { current };
 
-            while (!walk.Last().visited)
+            while (!grid.IsVisited(walk.Last()))
             {
-                var dir = walk.Last().GetShuffeldDirections()[0];
+                var directions = grid.GetShuffledDirections(walk.Last());
+                if (directions.Length == 0) break;
+                
+                var dir = directions[0];
                 var next = grid.GetNeighborInDirection(walk.Last(), dir);
 
                 if (next == null)
@@ -173,7 +199,7 @@ public class MazeGenerator : MonoBehaviour
                 }
                 else
                 {
-                    path[next] = grid.GetDirectionBetween(walk.Last(), next);
+                    pathDict[next] = grid.GetDirectionBetween(walk.Last(), next);
                     walk.Add(next);
                 }
             }
@@ -183,44 +209,50 @@ public class MazeGenerator : MonoBehaviour
                 var from = walk[i];
                 var to = walk[i + 1];
                 var dir = grid.GetDirectionBetween(from, to);
-                removeWalls(from, to, dir);
-                from.visited = true;
-                visitedHexCount++;
+                RemoveWalls(from, to, dir);
+                grid.SetVisited(from, true);
+                visitedCellCount++;
                 unvisited.Remove(from);
-                drawDebugPath(from);
+                DrawDebugPath(from);
                 yield return new WaitForSeconds(0.03f);
             }
 
-            walk.Last().visited = true;
-            visitedHexCount++;
-            unvisited.Remove(walk.Last());
+            if (walk.Count > 0)
+            {
+                grid.SetVisited(walk.Last(), true);
+                visitedCellCount++;
+                unvisited.Remove(walk.Last());
+            }
         }
 
-        Debug.Log("Maze generated (Wilson)");
+        Debug.Log($"Maze generated (Wilson) - {grid.GetGridType()}");
     }
 
-    private void AddFrontier(HexGennerator hex)
+    private void AddFrontier(object cell)
     {
-        foreach (var dir in hex.GetShuffeldDirections())
+        var directions = grid.GetShuffledDirections(cell);
+        foreach (var dir in directions)
         {
-            var neighbor = grid.GetNeighborInDirection(hex, dir);
-            if (neighbor != null && !neighbor.visited && !frontier.Contains(neighbor))
+            var neighbor = grid.GetNeighborInDirection(cell, dir);
+            if (neighbor != null && !grid.IsVisited(neighbor) && !frontier.Contains(neighbor))
                 frontier.Add(neighbor);
         }
     }
 
-    void drawDebugPath(HexGennerator currentHex)
+    void DrawDebugPath(object currentCell)
     {
-        if (!showDebugPath) return;
-        lr.positionCount = currentRecursionDepth;
-        lr.SetPosition(currentRecursionDepth - 1, currentHex.transform.position + Vector3.up);
+        if (!showDebugPath || lr == null) return;
+        
+        Vector3 position = grid.GetCellPosition(currentCell);
+        lr.positionCount = Mathf.Max(1, currentRecursionDepth);
+        lr.SetPosition(Mathf.Max(0, currentRecursionDepth - 1), position + Vector3.up);
         lr.startColor = Color.red;
+        lr.endColor = Color.red;
     }
 
-    private void removeWalls(HexGennerator hex1, HexGennerator hex2, HexGennerator.HexDirection direction)
+    private void RemoveWalls(object cell1, object cell2, HexGennerator.HexDirection direction)
     {
-        Debug.Log("For hex:" + hex1.name + ", found neighbor:" + hex2 + ", in direction:" + direction);
-        hex1.DisableFace(direction);
-        hex2.DisableFace(grid.GetOppositeDirection(direction));
+        Debug.Log($"For cell: {grid.GetCellName(cell1)}, found neighbor: {grid.GetCellName(cell2)}, in direction: {direction}");
+        grid.DisableFaceBetween(cell1, cell2, direction);
     }
 }
