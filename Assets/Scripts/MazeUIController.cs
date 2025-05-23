@@ -34,11 +34,11 @@ public class MazeUIController : MonoBehaviour
         heightSlider.minValue = MIN_SIZE;
         heightSlider.maxValue = MAX_SIZE;
 
-        widthSlider.value = gridController.gridWidth;
-        heightSlider.value = gridController.gridHeight;
+        widthSlider.value = gridController.GridWidth;
+        heightSlider.value = gridController.GridHeight;
 
-        widthValueText.text = gridController.gridWidth.ToString();
-        heightValueText.text = gridController.gridHeight.ToString();
+        widthValueText.text = gridController.GridWidth.ToString();
+        heightValueText.text = gridController.GridHeight.ToString();
 
         PopulateAlgorithmDropdown();
     }
@@ -56,12 +56,12 @@ public class MazeUIController : MonoBehaviour
     void OnWidthSliderChanged(float val)
     {
         int width = Mathf.RoundToInt(val);
-        gridController.gridWidth = width;
+        gridController.GridWidth = width;
         widthValueText.text = width.ToString();
 
         if (evenSizeToggle.isOn)
         {
-            gridController.gridHeight = width;
+            gridController.GridHeight = width;
             heightSlider.value = width;
             heightValueText.text = width.ToString();
         }
@@ -72,11 +72,11 @@ public class MazeUIController : MonoBehaviour
         int height = Mathf.RoundToInt(val);
         if (!evenSizeToggle.isOn)
         {
-            gridController.gridHeight = height;
+            gridController.GridHeight = height;
         }
         else
         {
-            gridController.gridWidth = height;
+            gridController.GridWidth = height;
             widthSlider.value = height;
             widthValueText.text = height.ToString();
         }
@@ -88,7 +88,7 @@ public class MazeUIController : MonoBehaviour
         if (isOn)
         {
             int width = Mathf.RoundToInt(widthSlider.value);
-            gridController.gridHeight = width;
+            gridController.GridHeight = width;
             heightSlider.value = width;
             heightValueText.text = width.ToString();
         }
@@ -98,7 +98,7 @@ public class MazeUIController : MonoBehaviour
     {
         if (float.TryParse(val, out float hexSize))
         {
-            gridController.hexSize = Mathf.Max(0.1f, hexSize);
+            gridController.HexSize = Mathf.Max(0.1f, hexSize);
         }
     }
 
@@ -107,7 +107,7 @@ public class MazeUIController : MonoBehaviour
         gridController.StopAllCoroutines();
 
         int algorithmIndex = algorithmDropdown.value;
-        mazeGenerator.algorithmType = (MazeGenerator.MazeAlgorithmType)algorithmIndex;
+        mazeGenerator.AlgorithmType = (MazeGenerator.MazeAlgorithmType)algorithmIndex;
 
         gridController.StartCoroutine(gridController.GetType()
             .GetMethod("generateGrid", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
@@ -120,7 +120,7 @@ public class MazeUIController : MonoBehaviour
         {
             Destroy(child.gameObject);
         }
-        gridController.hexGrid = new HexGennerator[gridController.gridWidth, gridController.gridHeight];
+        gridController.HexGrid = new HexGennerator[gridController.GridWidth, gridController.GridHeight];
         OnGenerateClicked();
     }
 

@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 7452859881135515967}
   - component: {fileID: 754617773643093615}
   - component: {fileID: 8885700893767141862}
-  - component: {fileID: 1543894255355192779}
   m_Layer: 0
   m_Name: Hex
   m_TagString: Untagged
@@ -107,56 +106,14 @@ MonoBehaviour:
   isStart: 0
   gridX: 0
   gridY: 0
+  currentState: 0
+  visitCount: 0
   showDirections: 0
   topVisible: 1
   bottomVisible: 1
   material: {fileID: 2100000, guid: d57e31c2c08c8a5499c4e952e0964622, type: 2}
   floorMaterial: {fileID: 2100000, guid: 0dd06af1b8fac3645a722ee5d39f39c7, type: 2}
+  currentCellMaterial: {fileID: 2100000, guid: 7a97a858cf37ff04cb1d19b854f8f806, type: 2}
+  visitedCellMaterial: {fileID: 2100000, guid: 37a1a54871291ed49bccc6a685c93296, type: 2}
+  backtrackedCellMaterial: {fileID: 2100000, guid: 8d5fb4833ea56624a8db24918238c545, type: 2}
   gizmoColor: {r: 0, g: 1, b: 1, a: 1}
---- !u!114 &1543894255355192779
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4596901680687941622}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7007eebe21055fe43948f72a48833d57, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  wallRemovalDuration: 0.5
-  wallRemovalCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  wallDissolveHeight: 2
-  useParticleEffects: 1
-  wallParticlePrefab: {fileID: 0}
-  wallParticleColor: {r: 0, g: 1, b: 1, a: 1}
-  playSound: 1
-  wallBreakSound: {fileID: 0}
-  volumeScale: 0.5
-  highlightDuration: 0.3
-  activeColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  visitedColor: {r: 0, g: 0, b: 1, a: 1}

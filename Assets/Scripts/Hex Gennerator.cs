@@ -32,6 +32,13 @@ public class HexGennerator : MonoBehaviour
         UpLeft = 5,
     }
 
+    public enum CellState
+    {
+        Unvisited,
+        Current,
+        Visited,
+        Backtracked
+    }
 
     [Header("Settings")]
     [HideInInspector] public float outerSize = 1f;
@@ -50,14 +57,15 @@ public class HexGennerator : MonoBehaviour
         HexDirection.UpLeft
     };
 
-
     [HideInInspector] public bool visited = false;
     [HideInInspector] public bool isStart = false;
     [HideInInspector] public int gridX = 0;
     [HideInInspector] public int gridY = 0;
+    [HideInInspector] public CellState currentState = CellState.Unvisited;
+    [HideInInspector] public int visitCount = 0; // Track how many times this cell has been visited
+
     [Header("Debug")]
     [SerializeField] private bool showDirections = false;
-
 
     [Tooltip("Controls whether the top face is visible")]
     [SerializeField] private bool topVisible = true;
@@ -72,6 +80,9 @@ public class HexGennerator : MonoBehaviour
     [Header("References")]
     [SerializeField] private Material material;
     [SerializeField] private Material floorMaterial;
+    [SerializeField] private Material currentCellMaterial;
+    [SerializeField] private Material visitedCellMaterial;
+    [SerializeField] private Material backtrackedCellMaterial;
 
     private List<Face> faces = new List<Face>();
     private Dictionary<HexDirection, int> wallFaceIndices = new Dictionary<HexDirection, int>();
@@ -127,7 +138,6 @@ public class HexGennerator : MonoBehaviour
 
         return new Vector3(size * Mathf.Cos(angleR), height, size * Mathf.Sin(angleR));
     }
-
 
     private Face CreateFace(float radiusBottom, float radiusTop, float heightBottom, float heightTop, int point, bool reverse = false)
     {
@@ -193,7 +203,6 @@ public class HexGennerator : MonoBehaviour
 
         return new Face(vertices, triangles, uvs);
     }
-
 
     void DrawFaces()
     {
@@ -275,8 +284,54 @@ public class HexGennerator : MonoBehaviour
         mesh.uv = uvs.ToArray();
         mesh.RecalculateNormals();
 
-        // Assign both materials
-        meshRenderer.materials = new Material[] { floorMaterial, material };
+        // Assign materials based on cell state
+        Material floorMat = GetFloorMaterial();
+        meshRenderer.materials = new Material[] { floorMat, material };
+    }
+
+    private Material GetFloorMaterial()
+    {
+        switch (currentState)
+        {
+            case CellState.Current:
+                return currentCellMaterial != null ? currentCellMaterial : floorMaterial;
+            case CellState.Visited:
+                return visitedCellMaterial != null ? visitedCellMaterial : floorMaterial;
+            case CellState.Backtracked:
+                return backtrackedCellMaterial != null ? backtrackedCellMaterial : floorMaterial;
+            default:
+                return floorMaterial;
+        }
+    }
+
+    public void SetCellState(CellState newState)
+    {
+        // Only increment visitCount and set visited when actually visiting
+        if (newState == CellState.Visited)
+        {
+            visitCount++;
+            visited = true;
+        }
+
+        // If this cell has been visited more than once, it's being backtracked through
+        if (visitCount > 1 && newState != CellState.Current)
+        {
+            currentState = CellState.Backtracked;
+        }
+        else
+        {
+            currentState = newState;
+        }
+
+        GenerateMesh(); // Update the visual representation
+    }
+
+    public void ResetCell()
+    {
+        currentState = CellState.Unvisited;
+        visited = false;
+        visitCount = 0;
+        GenerateMesh();
     }
 
     // Combined method with better error handling
@@ -350,11 +405,21 @@ public class HexGennerator : MonoBehaviour
             Gizmos.DrawSphere(center + Vector3.up * 0.5f, 0.2f);
         }
 
-        // If this hex has been visited, mark it
-        if (visited)
+        // Color code based on cell state
+        switch (currentState)
         {
-            Gizmos.color = Color.blue;
-            Gizmos.DrawCube(center + Vector3.up * 0.25f, new Vector3(0.1f, 0.1f, 0.1f));
+            case CellState.Current:
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawCube(center + Vector3.up * 0.25f, new Vector3(0.15f, 0.15f, 0.15f));
+                break;
+            case CellState.Visited:
+                Gizmos.color = Color.blue;
+                Gizmos.DrawCube(center + Vector3.up * 0.25f, new Vector3(0.1f, 0.1f, 0.1f));
+                break;
+            case CellState.Backtracked:
+                Gizmos.color = Color.red;
+                Gizmos.DrawCube(center + Vector3.up * 0.25f, new Vector3(0.12f, 0.12f, 0.12f));
+                break;
         }
     }
 }
