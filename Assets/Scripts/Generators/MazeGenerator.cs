@@ -12,7 +12,7 @@ public class MazeGenerator : MonoBehaviour
     public enum MazeAlgorithmType { DFS, Prim, Wilson }
 
     [Header("Generation Settings")]
-    [SerializeField] private bool instantMazeGeneration = false;
+    public bool InstantMazeGeneration = false;
     public MazeAlgorithmType AlgorithmType = MazeAlgorithmType.DFS;
 
     [Header("Entrance and Exit")]
@@ -20,7 +20,7 @@ public class MazeGenerator : MonoBehaviour
 
     [Header("Pathfinding")]
     [SerializeField] private bool showPathfindingPath = true;
-    [SerializeField] private bool instantPathDrawing = false;
+    public bool InstantPathDrawing = false;
     [SerializeField] private float lineRendererWidth;
     [SerializeField] private Material pathMaterial;
     private LineRenderer lr;
@@ -48,13 +48,13 @@ public class MazeGenerator : MonoBehaviour
         lr.endWidth = lineRendererWidth;
         lr.material = pathMaterial;
             
-        InitializeComponents();
+        initializeComponents();
     }
 
     /// <summary>
     /// Initializes algorithm, pathfinder, and entrance/exit manager components.
     /// </summary>
-    private void InitializeComponents()
+    private void initializeComponents()
     {
         // Initialize algorithms
         algorithms = new Dictionary<MazeAlgorithmType, IMazeAlgorithm>
@@ -92,21 +92,23 @@ public class MazeGenerator : MonoBehaviour
         }
 
         // Start maze generation (instant or coroutine)
-        if (instantMazeGeneration)
+        if (InstantMazeGeneration)
         {
-            GenerateMazeInstant();
+            generateMazeInstant();
         }
         else
         {
-            StartCoroutine(GenerateMazeCoroutine());
+            StartCoroutine(generateMazeCoroutine());
         }
     }
 
     /// <summary>
     /// Resets all cells in the maze to their initial state.
     /// </summary>
-    private void ResetMazeState()
+    public void ResetMazeState()
     {
+        if (mazeGrid == null || mazeGrid.TotalCellCount == 0) return;
+
         visitOrder.Clear();
 
         for (int x = 0; x < mazeGrid.GridWidth; x++)
@@ -126,12 +128,12 @@ public class MazeGenerator : MonoBehaviour
     /// <summary>
     /// Instantly generates the maze using the selected algorithm.
     /// </summary>
-    private void GenerateMazeInstant()
+    private void generateMazeInstant()
     {
         if (algorithms.TryGetValue(AlgorithmType, out IMazeAlgorithm algorithm))
         {
             algorithm.GenerateInstant(mazeGrid, startCell);
-            CompleteMazeGeneration();
+            completeMazeGeneration();
         }
         else
         {
@@ -142,12 +144,12 @@ public class MazeGenerator : MonoBehaviour
     /// <summary>
     /// Generates the maze using the selected algorithm as a coroutine (animated).
     /// </summary>
-    private IEnumerator GenerateMazeCoroutine()
+    private IEnumerator generateMazeCoroutine()
     {
         if (algorithms.TryGetValue(AlgorithmType, out IMazeAlgorithm algorithm))
         {
             yield return StartCoroutine(algorithm.GenerateCoroutine(mazeGrid, startCell));
-            CompleteMazeGeneration();
+            completeMazeGeneration();
         }
         else
         {
@@ -158,10 +160,10 @@ public class MazeGenerator : MonoBehaviour
     /// <summary>
     /// Called after maze generation is complete. Handles exit creation and pathfinding.
     /// </summary>
-    private void CompleteMazeGeneration()
+    private void completeMazeGeneration()
     {
         // Track all visited cells for exit creation
-        CollectVisitedCells();
+        collectVisitedCells();
         
         if (createEntranceAndExit)
         {
@@ -170,7 +172,7 @@ public class MazeGenerator : MonoBehaviour
 
         if (showPathfindingPath && startCell != null && exitCell != null)
         {
-            FindAndDrawPath();
+            findAndDrawPath();
         }
 
         Debug.Log($"Maze generated using {algorithms[AlgorithmType].AlgorithmName}");
@@ -179,7 +181,7 @@ public class MazeGenerator : MonoBehaviour
     /// <summary>
     /// Collects all visited cells in the maze for use in exit creation.
     /// </summary>
-    private void CollectVisitedCells()
+    private void collectVisitedCells()
     {
         visitOrder.Clear();
         for (int x = 0; x < mazeGrid.GridWidth; x++)
@@ -198,13 +200,13 @@ public class MazeGenerator : MonoBehaviour
     /// <summary>
     /// Finds a path from the entrance to the exit and draws it using the LineRenderer.
     /// </summary>
-    private void FindAndDrawPath()
+    private void findAndDrawPath()
     {
         List<Cell> pathToExit = pathfinder.FindPath(mazeGrid, startCell, exitCell);
 
         if (pathToExit != null && pathToExit.Count > 0)
         {
-            if (instantPathDrawing)
+            if (InstantPathDrawing)
             {
                 pathfinder.DrawPathInstant(lr, mazeGrid, pathToExit);
             }
@@ -226,7 +228,6 @@ public class MazeGenerator : MonoBehaviour
     public void SetAlgorithm(MazeAlgorithmType newAlgorithm)
     {
         AlgorithmType = newAlgorithm;
-        Init(); // Regenerate with new algorithm
     }
     
     /// <summary>

@@ -274,42 +274,4 @@ public class HexCell : Cell
         GenerateMesh();
     }
 
-    /// <summary>
-    /// Draws debug gizmos for the hex cell, including direction indicators if enabled.
-    /// </summary>
-    protected override void OnDrawGizmos()
-    {
-        base.OnDrawGizmos(); // Call base implementation for common state visualization
-
-        if (!showDirections) return;
-
-        Gizmos.color = gizmoColor;
-        Vector3 center = transform.position;
-        float arrowLength = outerSize * 0.8f;
-
-        // Draw direction indicators
-        Direction[] directions = GetAllDirections();
-        for (int i = 0; i < directions.Length; i++)
-        {
-            if (walls[i])
-            {
-                // Direction vector
-                float angleD = 60 * i;
-                float angleR = angleD * Mathf.Deg2Rad;
-                Vector3 direction = new Vector3(Mathf.Cos(angleR), 0, Mathf.Sin(angleR));
-
-                // Draw wall indicator
-                Gizmos.DrawLine(center, center + direction * arrowLength);
-
-                // Label the direction
-#if UNITY_EDITOR
-                if (UnityEditor.Selection.activeGameObject == gameObject)
-                {
-                    UnityEditor.Handles.Label(center + direction * (arrowLength + 0.2f),
-                        $"{i}: {directions[i]}");
-                }
-#endif
-            }
-        }
-    }
 }

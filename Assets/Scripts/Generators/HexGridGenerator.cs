@@ -36,7 +36,7 @@ public class HexGridGenerator : MonoBehaviour, IMazeGrid
     /// <summary>
     /// Initializes the grid and starts maze generation.
     /// </summary>
-    void Start()
+    public void Init()
     {
         mazeGenerator = GetComponent<MazeGenerator>();
         Grid = new Cell[GridWidth, GridHeight];
@@ -59,6 +59,7 @@ public class HexGridGenerator : MonoBehaviour, IMazeGrid
     /// </summary>
     void Update()
     {
+        if (Grid == null || Grid.Length == 0) return; // Ensure grid is initialized
         updateCellHeights();
     }
 
